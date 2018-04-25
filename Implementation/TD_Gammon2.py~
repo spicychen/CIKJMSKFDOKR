@@ -1,0 +1,97 @@
+import numpy as np
+import random
+import copy
+
+class TDGammon:
+	def __init__(self, num_inputs, num_hidden, num_output, lr=0.1, d=1, l=0):
+		self.num_inputs = num_inputs
+		self.num_hidden = num_hidden
+		self.num_output = num_output
+		self.learning_rate = lr
+		self.discount_rate = d
+		self.lamb = l
+		
+		#layers
+		self.input_layer = [0 for x in range(self.num_inputs)]
+		self.hidden_layer = [0 for x in range(self.num_hidden)]
+		self.output_layer = [0 for x in range(self.num_output)]
+		#self.prehidden_layer = None
+		self.preoutput_layer = None
+		
+		#weights and eligibility trace
+		self.input_weights = [[np.random.rand() for x in range(self.num_hidden)] for y in range(self.num_inputs)]
+		self.hidden_weights = [[np.random.rand() for x in range(self.num_output)] for y in range(self.num_hidden)]
+		
+		#print(self.input_weights, "\n", self.hidden_weights)
+		#hello
+		self.input_eligibility_trace = [[0 for x in range(self.num_hidden)]	for y in range(self.num_inputs)]
+		self.hidden_eligibility_trace = [[0 for x in range(self.num_output)] for y in range(self.num_hidden)]
+		
+	def sigmoid(self, z):
+		return 1.0 / (1.0 + np.exp(-z))
+		
+	def gradient(self, u):
+		return u*(1.0-u)
+			
+	def feedforward(self):
+		
+		#self.prehidden_layer = copy.deepcopy(self.hidden_layer)
+		self.preoutput_layer = copy.deepcopy(self.output_layer)
+		self.hidden_layer = [0 for x in range(self.num_hidden)]
+		self.output_layer = [0 for x in range(self.num_output)]
+					
+		for j in range(self.num_hidden):
+			for i in range(self.num_inputs):
+				self.hidden_layer[j] += (self.input_layer[i] * self.input_weights[i][j])
+			self.hidden_layer[j] = self.sigmoid(self.hidden_layer[j])
+			
+		for j in range(self.num_output):
+			for i in range(self.num_hidden):
+				self.output_layer[j] += (self.hidden_layer[i] * self.hidden_weights[i][j])
+			self.output_layer[j] = self.sigmoid(self.output_layer[j])
+			
+	def getValue(self,inputs):
+		copy_hidden_layer = [0 for x in range(self.num_hidden)]#copy.deepcopy(self.hidden_layer)
+		copy_output_layer = [0 for x in range(self.num_output)]#copy.deepcopy(self.output_layer)
+		
+		for j in range(self.num_hidden):
+			for i in range(self.num_inputs):
+				copy_hidden_layer[j] += (inputs[i] * self.input_weights[i][j])
+			copy_hidden_layer[j] = self.sigmoid(copy_hidden_layer[j])
+			
+		for j in range(self.num_output):
+			for i in range(self.num_hidden):
+				copy_output_layer[j] += (copy_hidden_layer[i] * self.hidden_weights[i][j])
+			copy_output_layer[j] = self.sigmoid(copy_output_layer[j])
+			
+		return copy_output_layer
+			
+	def model(self, model_func, current_state, action):
+		return model_func(current_state, action)
+			
+	def TDlearn(self, reward, side):
+			
+		if self.preoutput_layer is not None:
+			
+			in_max = max(self.input_layer)
+			in_max_pos = [i for i,j in enumerate(self.input_layer) if j==in_max]
+			#print(in_max_pos)
+			
+			hid_max = max(self.hidden_layer)
+			hid_max_pos = [i for i,j in enumerate(self.hidden_layer) if j==in_max]
+			
+			for k in range(self.num_output):
+				for j in hid_max_pos:
+					self.hidden_eligibility_trace[j][k] = (self.lamb * self.hidden_eligibility_trace[j][k] +
+						self.gradient(self.hidden_weights[j][k]) * self.output_layer[k])#self.output_layer[side])
+					self.hidden_weights[j][k] += self.learning_rate * (reward+self.discount_rate*self.output_layer[side]-self.preoutput_layer[side]) * self.hidden_eligibility_trace[j][k]
+					#self.hidden_weights[j][k] = self.sigmoid(self.hidden_weights[j][k])
+					#print(reward+self.discount_rate*self.output_layer[side]-self.preoutput_layer[side])
+			
+			for j in range(self.num_hidden):
+				for i in in_max_pos:
+					self.input_eligibility_trace[i][j] = (self.lamb * self.input_eligibility_trace[i][j] + 
+						self.gradient(self.input_weights[i][j]) * self.hidden_layer[j])#self.output_layer[side])#
+					self.input_weights[i][j] += self.learning_rate * (reward+self.discount_rate*self.output_layer[side]-self.preoutput_layer[side]) * self.input_eligibility_trace[i][j]
+			
+			

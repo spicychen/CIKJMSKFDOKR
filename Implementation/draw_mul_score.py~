@@ -1,0 +1,50 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+cont1 = 'lr_'
+cont2 = '_df_'
+cont3 = '_eps_'
+file_name = 'lr_change'
+for i in range(1,11):
+	lr = 0.01 * i
+	df = 0.9
+	eps = 0.9
+	rname = cont1 + ('%.2f' % lr) + cont2 + ('%.2f' % df) + cont3 + ('%.2f' % eps) + '.gz'
+	fig = pd.read_pickle(rname, compression = 'gzip')
+
+	fig = fig.groupby(fig.index//20).mean()
+#fig = fig.interpolate(method = 'cubic')
+	plt.subplot(3,10, i)
+	plt.title('lr: '+ ('%.2f' % lr))
+	plt.plot(fig)
+	
+for i in range(1,11):
+	lr = 0.01
+	df = 1.0 - 0.02 * i
+	eps = 0.9
+	rname = cont1 + ('%.2f' % lr) + cont2 + ('%.2f' % df) + cont3 + ('%.2f' % eps) + '.gz'
+	fig = pd.read_pickle(rname, compression = 'gzip')
+
+	fig = fig.groupby(fig.index//20).mean()
+
+	plt.subplot(3,10, 10+i)
+	plt.title('df: '+ ('%.2f' % df))
+	plt.plot(fig)
+	
+for i in range(1,11):
+	lr = 0.01
+	df = 0.9
+	eps = 1.0 - 0.05 * i
+	rname = cont1 + ('%.2f' % lr) + cont2 + ('%.2f' % df) + cont3 + ('%.2f' % eps) + '.gz'
+	fig = pd.read_pickle(rname, compression = 'gzip')
+
+	fig = fig.groupby(fig.index//20).mean()
+
+	plt.subplot(3,10, 20+i)
+	plt.title('eps: '+ ('%.2f' % eps))
+	plt.plot(fig)
+plt.subplots_adjust(left  = 0.125,right = 0.9,bottom = 0.1,top = 0.9,wspace = 0.2,hspace = 0.5)
+#plt.suptitle(file_name)
+win = plt.gcf()
+win.canvas.set_window_title(file_name)
+plt.show()
